@@ -1,0 +1,12 @@
+*.o
+*.a
+*.so
+*.exe
+bin/
+obj/
+lib/
+compile_commands.json
+.cache/
+gmon.out
+docs/
+test/bigfile/test.fc
