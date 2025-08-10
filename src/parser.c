@@ -571,7 +571,7 @@ static void print_object(struct parser *parser, bool dont_print_next) {
     if (parser->kind == TK_COMMA)
       print_next(parser);
   }
-  unlikely(dont_print_next) ? skip_next(parser) : print_next(parser);
+  unlikely(dont_print_next) ? next(parser) : print_next(parser);
 }
 
 static void print_array(struct parser *parser, bool dont_print_next) {
@@ -583,7 +583,7 @@ static void print_array(struct parser *parser, bool dont_print_next) {
     if (parser->kind == TK_COMMA)
       print_next(parser);
   }
-  unlikely(dont_print_next) ? skip_next(parser) : print_next(parser);
+  unlikely(dont_print_next) ? next(parser) : print_next(parser);
 }
 
 static void print_value_aux(struct parser *parser, bool dont_print_next) {
@@ -598,7 +598,7 @@ static void print_value_aux(struct parser *parser, bool dont_print_next) {
     case TK_NULL:
     case TK_NUMBER:
     case TK_STRING:
-      unlikely(dont_print_next) ? skip_next(parser) : print_next(parser);
+      unlikely(dont_print_next) ? next(parser) : print_next(parser);
       return;
     default:
       error(parser, "unexpected %s", token_desc[parser->kind]);
