@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-constexpr size_t BUFFER_SIZE = 4096;
+constexpr size_t BUFFER_SIZE = 4096 > sizeof(struct block) ? 4096 - sizeof(struct block) : 4096;
 
 unsigned char zero_buffer[1];
 
