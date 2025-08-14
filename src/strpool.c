@@ -84,13 +84,15 @@ static void next_available_block(struct strpool *strpool, size_t size) {
   block->remaining_size = size;
   block->end = block->buf + size;
   block->curr = block->buf;
-  block->next = strpool->current_block->next;
+  block->next = NULL;
   block->prev = strpool->current_block;
+  strpool->current_block->next = block;
 
   strpool->current_block = block;
 }
 
-static void realloc_block(struct block *block, size_t size) {
+static void realloc_current_block(struct strpool *strpool, size_t size) {
+  struct block *block = strpool->current_block;
   struct block *prev = block->prev;
   struct block *next = block->next;
   size_t used_size = block->curr - block->buf;
@@ -104,11 +106,15 @@ static void realloc_block(struct block *block, size_t size) {
   new_block->remaining_size = size - used_size;
   new_block->end = new_block->buf + size;
   new_block->curr = new_block->buf;
+  new_block->prev = prev;
+  new_block->next = next;
 
   if (next)
     next->prev = new_block;
   if (prev)
     prev->next = new_block;
+
+  strpool->current_block = new_block;
 }
 
 unsigned char *strpool_alloc_fallback(struct strpool *strpool, size_t size) {
@@ -117,7 +123,7 @@ unsigned char *strpool_alloc_fallback(struct strpool *strpool, size_t size) {
   store_current_block_info(strpool);
 
   if (unlikely(strpool->currpos == strpool->current_block->buf)) {
-    realloc_block(strpool->current_block, size);
+    realloc_current_block(strpool, size);
   } else {
     size_t new_block_size = max(size, BUFFER_SIZE);
     next_available_block(strpool, new_block_size);
@@ -134,7 +140,7 @@ unsigned char *strpool_realloc_fallback(struct strpool *strpool,
   store_current_block_info(strpool);
 
   if (unlikely(strpool->currpos == strpool->current_block->buf)) {
-    realloc_block(strpool->current_block, new_size * 2);
+    realloc_current_block(strpool, new_size * 2);
   } else {
     next_available_block(strpool, new_size);
 

@@ -11,7 +11,7 @@ enum selector_type: unsigned char {
 };
 
 static inline bool can_match_key(enum selector_type type) {
-  return type >= MATCH_KEY;
+  return type >= MATCH_ALL_KEY;
 }
 
 static inline bool can_match_index(enum selector_type type) {
@@ -20,7 +20,6 @@ static inline bool can_match_index(enum selector_type type) {
 
 struct selector {
   struct match *submatch;
-  enum selector_type type;
   union {
     unsigned char *key;
     size_t index;
@@ -31,6 +30,7 @@ struct selector {
   } matched;
   unsigned int expected_keylen;
   unsigned int matched_keylen;
+  enum selector_type type;
 };
 
 struct match {
