@@ -1,7 +1,6 @@
 #include "parser.h"
 #include "match.h"
 #include "strpool.h"
-#include "utils.h"
 
 #include <unistd.h>
 
