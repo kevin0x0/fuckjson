@@ -30,7 +30,7 @@ enum tokenkind: unsigned char {
 enum print_option: unsigned char {
   PRINT_NONE = 0,
   PRINT_RAW = 1,
-  PRINT_JOINLINE = 2,
+  PRINT_NULL_SEP = 2,
 };
 
 struct parser {
@@ -40,6 +40,7 @@ struct parser {
   enum tokenkind kind;
   enum print_option print_option;
   struct strpool *strpool;
+  const char *delimiter;
 };
 
 void start_matching(struct parser *parser, struct match *match);

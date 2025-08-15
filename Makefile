@@ -11,7 +11,7 @@ include objects.mk
 CC = gcc
 DEBUG = -DNDEBUG
 OPTIMIZE = -O3
-CFLAGS = $(DEBUG) $(OPTIMIZE) -Wall -Wextra --std=c23
+CFLAGS = $(DEBUG) $(OPTIMIZE) -Wall -Wextra --std=c23 -D_POSIX_C_SOURCE=2
 
 
 $(BIN_DIR)/fj: $(OBJECTS) | create_dir

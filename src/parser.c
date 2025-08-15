@@ -714,8 +714,11 @@ static inline void print_value(struct parser *parser) {
   }
   print_value_aux(parser, true);
 
-  if (!(parser->print_option & PRINT_JOINLINE))
-    fputc('\n', stdout);
+  if (parser->print_option & PRINT_NULL_SEP) {
+    fputc('\0', stdout);
+  } else {
+    fputs(parser->delimiter, stdout);
+  }
 }
 
 #define FOR_EACH_KEY(on_key)                                                   \
