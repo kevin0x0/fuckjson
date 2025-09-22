@@ -85,12 +85,7 @@ static inline void parse_number(struct parser *parser, int ch) {
   lex_return(TK_NUMBER);
 }
 
-static inline void skip_number(struct parser *parser, int ch) {
-  PARSE_NUMBER({});
-  lex_return(TK_NUMBER);
-}
-
-static unsigned long escaped_char(struct parser *parser) {
+static wint_t escaped_char(struct parser *parser) {
   int ch = fgetc(parser->file);
   if (unlikely(ch == EOF))
     error(parser, "unterminated string");
@@ -120,7 +115,7 @@ static unsigned long escaped_char(struct parser *parser) {
         digits[i] = ch;
       }
       digits[ARRAY_SIZE(digits) - 1] = '\0';
-      return (unsigned long)strtoul(digits, NULL, 16);
+      return (wint_t)strtoul(digits, NULL, 16);
     }
     case '\\':
       return '\\';
@@ -142,27 +137,22 @@ static size_t encode_utf8_len(unsigned long ch) {
   return 0;
 }
 
-static size_t encode_utf8(unsigned long ch, unsigned char *buffer) {
+static void encode_utf8(unsigned long ch, unsigned char *buffer) {
     if (ch <= 0x7F) {
         buffer[0] = (char)ch;
-        return 1;
     } else if (ch <= 0x7FF) {
         buffer[0] = (char)(0xC0 | (ch >> 6));
         buffer[1] = (char)(0x80 | (ch & 0x3F));
-        return 2;
     } else if (ch <= 0xFFFF) {
         buffer[0] = (char)(0xE0 | (ch >> 12));
         buffer[1] = (char)(0x80 | ((ch >> 6) & 0x3F));
         buffer[2] = (char)(0x80 | (ch & 0x3F));
-        return 3;
     } else if (ch <= 0x10FFFF) {
         buffer[0] = (char)(0xF0 | (ch >> 18));
         buffer[1] = (char)(0x80 | ((ch >> 12) & 0x3F));
         buffer[2] = (char)(0x80 | ((ch >> 6) & 0x3F));
         buffer[3] = (char)(0x80 | (ch & 0x3F));
-        return 4;
     }
-    return 0;
 }
 
 static void parse_string(struct parser *parser) {
@@ -274,196 +264,6 @@ retry:
   }
 }
 
-static void skip_next(struct parser *parser) {
-retry:
-  int ch = fgetc(parser->file);
-
-  if (unlikely(ch == EOF))
-    lex_return(TK_EOF);
-
-  if (unlikely(ch < 0))
-    unreachable();
-
-  if (unlikely(ch > 255))
-    unreachable();
-
-  switch (ch) {
-    case ':':
-      lex_return(TK_COLON);
-    case ',':
-      lex_return(TK_COMMA);
-    case '{':
-      lex_return(TK_LBRACE);
-    case '}':
-      lex_return(TK_RBRACE);
-    case '[':
-      lex_return(TK_LBRACKET);
-    case ']':
-      lex_return(TK_RBRACKET);
-    case '-':
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9': {
-      skip_number(parser, ch);
-    }
-    case 'f':
-    case 't': {
-      while (is_alpha(ch = fgetc(parser->file)))
-        continue;
-
-      if (unlikely(ch != EOF))
-        ungetc(ch, parser->file);
-      
-      lex_return(TK_BOOL);
-    }
-    case 'n': {
-      while (is_alpha(ch = fgetc(parser->file)))
-        continue;
-
-      if (unlikely(ch != EOF))
-        ungetc(ch, parser->file);
-
-      lex_return(TK_NULL);
-    }
-    case '"': {
-      while (true) {
-        while ((ch = fgetc(parser->file)) != '"' && ch != '\\' && ch != EOF)
-          continue;
-
-        if (unlikely(ch == EOF))
-          error(parser, "unterminated string");
-
-        if (ch == '"')
-          break;
-
-        fgetc(parser->file);
-      }
-      lex_return(TK_STRING);
-    }
-    case ' ':
-    case '\t':
-    case '\n':
-      goto retry;
-  }
-}
-
-static inline void print_number(struct parser *parser, int ch) {
-  PARSE_NUMBER(fputc(ch, stdout));
-  lex_return(TK_NUMBER);
-}
-
-static void print_next(struct parser *parser) {
-retry:
-  int ch = fgetc(parser->file);
-
-  if (unlikely(ch == EOF))
-    lex_return(TK_EOF);
-
-  if (unlikely(ch < 0))
-    unreachable();
-
-  if (unlikely(ch > 255))
-    unreachable();
-
-  switch (ch) {
-    case ':':
-      fputc(ch, stdout);
-      lex_return(TK_COLON);
-    case ',':
-      fputc(ch, stdout);
-      lex_return(TK_COMMA);
-    case '{':
-      fputc(ch, stdout);
-      lex_return(TK_LBRACE);
-    case '}':
-      fputc(ch, stdout);
-      lex_return(TK_RBRACE);
-    case '[':
-      fputc(ch, stdout);
-      lex_return(TK_LBRACKET);
-    case ']':
-      fputc(ch, stdout);
-      lex_return(TK_RBRACKET);
-    case '-':
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9': {
-      print_number(parser, ch);
-      return;
-    }
-    case 'f':
-    case 't': {
-      fputs(ch == 'f' ? "false" : "true", stdout);
-      while (is_alpha(ch = fgetc(parser->file)))
-        continue;
-
-      if (unlikely(ch != EOF))
-        ungetc(ch, parser->file);
-
-      lex_return(TK_BOOL);
-    }
-    case 'n': {
-      fputs("null", stdout);
-      while (is_alpha(ch = fgetc(parser->file)))
-        continue;
-
-      if (unlikely(ch != EOF))
-        ungetc(ch, parser->file);
-
-      lex_return(TK_NULL);
-    }
-    case '"': {
-      fputc(ch, stdout);
-      while (true) {
-        ch = fgetc(parser->file);
-        if (unlikely(ch == EOF))
-          error(parser, "unterminated string");
-
-        fputc(ch, stdout);
-
-        if (ch == '"')
-          break;
-
-        if (ch != '\\')
-          continue;
-
-        ch = fgetc(parser->file);
-        fputc(ch, stdout);
-        if (ch == 'u') {
-          for (size_t i = 0; i < 4; ++i) {
-            if (unlikely((ch = fgetc(parser->file)) == EOF))
-              error(parser, "unterminated string");
-            if (unlikely(ch == '"'))
-              error(parser, "bad escape sequence");
-            fputc(ch, stdout);
-          }
-        }
-
-
-      }
-      lex_return(TK_STRING);
-    }
-    case ' ':
-    case '\t':
-    case '\n':
-      goto retry;
-  }
-}
-
 static const char *token_desc[TK_NKIND] = {
   [TK_NUMBER] = "number",
   [TK_BOOL] = "bool",
@@ -491,165 +291,165 @@ static inline void lex_match(struct parser *parser, enum tokenkind expected) {
   next(parser);
 }
 
-static inline void skip_match(struct parser *parser, enum tokenkind expected) {
-  if (unlikely(parser->kind != expected))
-    error(parser, "expect %s, got %s", token_desc[expected],
-          token_desc[parser->kind]);
+static void skip_value(struct parser *parser);
 
-  skip_next(parser);
-}
-
-static inline void print_match(struct parser *parser, enum tokenkind expected) {
-  if (unlikely(parser->kind != expected))
-    error(parser, "expect %s, got %s", token_desc[expected],
-          token_desc[parser->kind]);
-
-  print_next(parser);
-}
-
-static void skip_value_aux(struct parser *parser, bool reserve_next);
-
-static void skip_object(struct parser *parser, bool reserve_next) {
+static void skip_object(struct parser *parser) {
   assert(parser->kind == TK_LBRACE);
 
-  skip_next(parser);
+  next(parser);
   while (parser->kind != TK_RBRACE) {
-    skip_match(parser, TK_STRING);
-    skip_match(parser, TK_COLON);
-    skip_value_aux(parser, false);
+    lex_match(parser, TK_STRING);
+    lex_match(parser, TK_COLON);
+    skip_value(parser);
     if (parser->kind == TK_COMMA)
-      skip_next(parser);
+      next(parser);
   }
-  unlikely(reserve_next) ? next(parser) : skip_next(parser);
+
+  next(parser);
 }
 
-static void skip_array(struct parser *parser, bool reserve_next) {
+static void skip_array(struct parser *parser) {
   assert(parser->kind == TK_LBRACKET);
 
-  skip_next(parser);
+  next(parser);
   while (parser->kind != TK_RBRACKET) {
-    skip_value_aux(parser, false);
+    skip_value(parser);
     if (parser->kind == TK_COMMA)
-      skip_next(parser);
+      next(parser);
   }
-  unlikely(reserve_next) ? next(parser) : skip_next(parser);
+
+  next(parser);
 }
 
-static void skip_value_aux(struct parser *parser, bool reserve_next) {
+static void skip_value(struct parser *parser) {
   switch (parser->kind) {
     case TK_LBRACE:
-      skip_object(parser, reserve_next);
+      skip_object(parser);
       return;
     case TK_LBRACKET:
-      skip_array(parser, reserve_next);
+      skip_array(parser);
       return;
     case TK_BOOL:
     case TK_NULL:
     case TK_NUMBER:
     case TK_STRING:
-      unlikely(reserve_next) ? next(parser) : skip_next(parser);
+      next(parser);
       return;
     default:
       error(parser, "unexpected %s", token_desc[parser->kind]);
   }
 }
 
-static inline void skip_value(struct parser *parser) {
-  skip_value_aux(parser, true);
-}
-
-static void print_value_aux(struct parser *parser, bool dont_print_next);
-
-static void print_object(struct parser *parser, bool dont_print_next) {
-  assert(parser->kind == TK_LBRACE);
-
-  print_next(parser);
-  while (parser->kind != TK_RBRACE) {
-    print_match(parser, TK_STRING);
-    print_match(parser, TK_COLON);
-    print_value_aux(parser, false);
-    if (parser->kind == TK_COMMA)
-      print_next(parser);
-  }
-  unlikely(dont_print_next) ? next(parser) : print_next(parser);
-}
-
-static void print_array(struct parser *parser, bool dont_print_next) {
-  assert(parser->kind == TK_LBRACKET);
-
-  print_next(parser);
-  while (parser->kind != TK_RBRACKET) {
-    print_value_aux(parser, false);
-    if (parser->kind == TK_COMMA)
-      print_next(parser);
-  }
-  unlikely(dont_print_next) ? next(parser) : print_next(parser);
-}
-
-static void print_value_aux(struct parser *parser, bool dont_print_next) {
+static inline void print_token(struct parser *parser) {
   switch (parser->kind) {
+    case TK_COMMA:
+      fputc(',', stdout);
+      break;
+    case TK_COLON:
+      fputc(':', stdout);
+      break;
     case TK_LBRACE:
-      print_object(parser, dont_print_next);
-      return;
+      fputc('{', stdout);
+      break;
+    case TK_RBRACE:
+      fputc('}', stdout);
+      break;
     case TK_LBRACKET:
-      print_array(parser, dont_print_next);
-      return;
+      fputc('[', stdout);
+      break;
+    case TK_RBRACKET:
+      fputc(']', stdout);
+      break;
     case TK_BOOL:
+      fputs(parser->attr.boolean ? "true" : "false", stdout);
+      break;
     case TK_NULL:
+      fputs("null", stdout);
+      break;
     case TK_NUMBER:
+      fwrite(parser->attr.number, 1, parser->length, stdout);
+      break;
     case TK_STRING:
-      unlikely(dont_print_next) ? next(parser) : print_next(parser);
-      return;
-    default:
+      fwrite(parser->attr.string, 1, parser->length, stdout);
+      break;
+    case TK_EOF:
       error(parser, "unexpected %s", token_desc[parser->kind]);
-  }
-}
-
-static char to_hex_digit(char ch) {
-  if (ch <= 9)
-    return '0' + ch;
-
-  switch (ch) {
-    case 10:
-      return 'A';
-    case 11:
-      return 'B';
-    case 12:
-      return 'C';
-    case 13:
-      return 'D';
-    case 14:
-      return 'E';
-    case 15:
-      return 'F';
     default:
       unreachable();
   }
 }
 
+static inline void print_and_match(struct parser *parser, enum tokenkind expected) {
+  print_token(parser);
+  lex_match(parser, expected);
+}
+
+static inline void print_and_next(struct parser *parser) {
+  print_token(parser);
+  next(parser);
+}
+
+static void print_value(struct parser *parser);
+
+static void print_object(struct parser *parser) {
+  assert(parser->kind == TK_LBRACE);
+
+  print_and_next(parser);
+  while (parser->kind != TK_RBRACE) {
+    print_and_next(parser);
+    print_and_match(parser, TK_STRING);
+    print_and_match(parser, TK_COLON);
+    print_value(parser);
+    if (parser->kind == TK_COMMA)
+      print_and_next(parser);
+  }
+
+  print_and_next(parser);
+}
+
+static void print_array(struct parser *parser) {
+  assert(parser->kind == TK_LBRACKET);
+
+  print_and_next(parser);
+  while (parser->kind != TK_RBRACKET) {
+    print_value(parser);
+    if (parser->kind == TK_COMMA)
+      print_and_next(parser);
+  }
+
+  print_and_next(parser);
+}
+
+static inline char to_hex_digit(char ch) {
+  if (ch <= 9)
+    return '0' + ch;
+
+  return 'A' + (ch - 10);
+}
+
 static void print_escape(unsigned char ch) {
-  const char *output_str;
+  const char *s;
   switch (ch) {
     case '\r':
-      output_str = "\\r";
+      s = "\\r";
       break;
     case '\f':
-      output_str = "\\f";
+      s = "\\f";
       break;
     case '\n':
-      output_str = "\\n";
+      s = "\\n";
       break;
     case '\t':
-      output_str = "\\t";
+      s = "\\t";
       break;
     case '\b':
-      output_str = "\\b";
+      s = "\\b";
       break;
     case '"':
-      output_str = "\\\"";
+      s = "\\\"";
       break;
     case '\\':
-      output_str = "\\\\";
+      s = "\\\\";
       break;
     default: {
       fputs("\\u00", stdout);
@@ -658,66 +458,50 @@ static void print_escape(unsigned char ch) {
       return;
     }
   }
-  fputs(output_str, stdout);
+  fputs(s, stdout);
 }
 
 static void print_string(struct parser *parser) {
-  unsigned char *string = parser->attr.string;
-  size_t length = parser->length;
+  unsigned char *s = parser->attr.string;
+  unsigned char *end = s + parser->length;
   fputc('"', stdout);
-  for (size_t i = 0; i < length; ++i) {
-    if (is_cntrl(string[i]) || string[i] == '"' || string[i] == '\\') {
-      print_escape(string[i]);
-    } else {
-      fputc(string[i], stdout);
-    }
+
+  while (true) {
+    unsigned char *curr = s;
+    while (likely(!(curr == end || is_cntrl(*curr) || *curr == '"' || *curr == '\\')))
+      ++curr;
+
+    fwrite(s, 1, curr - s, stdout);
+
+    if (unlikely(curr == end))
+      break;
+
+    print_escape(*curr);
+    s = curr + 1;
   }
+
   fputc('"', stdout);
 }
 
-static inline void print_value(struct parser *parser) {
+static void print_value(struct parser *parser) {
   switch (parser->kind) {
-    case TK_NUMBER:
-      fprintf(stdout, "%.*s", parser->length, parser->attr.number);
-      break;
-    case TK_STRING:
-      parser->print_option & PRINT_RAW
-          ? fwrite(parser->attr.string, 1, parser->length, stdout)
-          : print_string(parser);
-      break;
-    case TK_BOOL:
-      fputs(parser->attr.boolean ? "true" : "false", stdout);
-      break;
-    case TK_NULL:
-      fputs("null", stdout);
-      break;
-    case TK_COLON:
-      fputc(':', stdout);
-      break;
-    case TK_COMMA:
-      fputc(',', stdout);
-      break;
-    case TK_RBRACE:
-      fputc('}', stdout);
-      break;
-    case TK_RBRACKET:
-      fputc(']', stdout);
-      break;
-    case TK_LBRACKET:
-      fputc('[', stdout);
-      break;
     case TK_LBRACE:
-      fputc('{', stdout);
-      break;
+      print_object(parser);
+      return;
+    case TK_LBRACKET:
+      print_array(parser);
+      return;
+    case TK_STRING:
+      print_string(parser);
+      next(parser);
+      return;
+    case TK_BOOL:
+    case TK_NULL:
+    case TK_NUMBER:
+      print_and_next(parser);
+      return;
     default:
-      break;
-  }
-  print_value_aux(parser, true);
-
-  if (parser->print_option & PRINT_NULL_SEP) {
-    fputc('\0', stdout);
-  } else {
-    fputs(parser->delimiter, stdout);
+      error(parser, "unexpected %s", token_desc[parser->kind]);
   }
 }
 
@@ -779,8 +563,8 @@ start:
       strpool_free(parser->strpool, p->matched_keylen);
       goto next_loop;
     }
-    skip_next(parser);
-    skip_match(parser, TK_COLON);
+    next(parser);
+    lex_match(parser, TK_COLON);
     skip_value(parser);
   next_loop:
   });
@@ -819,7 +603,18 @@ start:
 
 static void do_match(struct parser *parser, struct match *match) {
   if (!match) {
-    print_value(parser);
+    if ((parser->print_option & PRINT_RAW) && parser->kind == TK_STRING) {
+      fwrite(parser->attr.string, 1, parser->length, stdout);
+      next(parser);
+    } else {
+      print_value(parser);
+    }
+
+    if (parser->print_option & PRINT_NULL_SEP) {
+      fputc('\0', stdout);
+    } else {
+      fputs(parser->delimiter, stdout);
+    }
     return;
   }
 
