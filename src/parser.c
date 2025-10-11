@@ -481,6 +481,7 @@ static void print_string(struct parser *parser) {
   }
 
   fputc('"', stdout);
+  next(parser);
 }
 
 static void print_value(struct parser *parser) {
@@ -493,7 +494,6 @@ static void print_value(struct parser *parser) {
       return;
     case TK_STRING:
       print_string(parser);
-      next(parser);
       return;
     case TK_BOOL:
     case TK_NULL:
@@ -609,12 +609,15 @@ static void do_match(struct parser *parser, struct match *match) {
     } else {
       print_value(parser);
     }
-
     if (parser->print_option & PRINT_NULL_SEP) {
       fputc('\0', stdout);
     } else {
       fputs(parser->delimiter, stdout);
     }
+
+    if (parser->print_option & PRINT_FLUSH_STDOUT)
+      fflush(stdout);
+
     return;
   }
 

@@ -10,13 +10,18 @@ struct options {
   bool print_raw;
   bool stream;
   bool null_sep;
+  bool flush_stdout;
 };
 
 static void parse_options(int argc, char *const *argv,
                           struct options *options) {
   int opt;
-  while ((opt = getopt(argc, argv, "+s0rd:")) != -1) {
+  while ((opt = getopt(argc, argv, "+s0rfd:")) != -1) {
     switch (opt) {
+      case 'f': {
+        options->flush_stdout = true;
+        break;
+      }
       case 's': {
         options->stream = true;
         break;
@@ -54,6 +59,7 @@ int main(int argc, char **argv) {
     .print_raw = false,
     .stream = false,
     .null_sep = false,
+    .flush_stdout = false,
   };
 
   parse_options(argc, argv, &options);
@@ -75,6 +81,9 @@ int main(int argc, char **argv) {
 
   if (options.null_sep)
     parser.print_option |= PRINT_NULL_SEP;
+
+  if (options.flush_stdout)
+    parser.print_option |= PRINT_FLUSH_STDOUT;
 
   if (options.stream) {
     start_stream_matching(&parser, match);

@@ -31,6 +31,7 @@ enum print_option: unsigned char {
   PRINT_NONE = 0,
   PRINT_RAW = 1,
   PRINT_NULL_SEP = 2,
+  PRINT_FLUSH_STDOUT = 4,
 };
 
 struct parser {
