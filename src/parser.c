@@ -396,7 +396,6 @@ static void print_object(struct parser *parser) {
 
   print_and_next(parser);
   while (parser->kind != TK_RBRACE) {
-    print_and_next(parser);
     print_and_match(parser, TK_STRING);
     print_and_match(parser, TK_COLON);
     print_value(parser);
