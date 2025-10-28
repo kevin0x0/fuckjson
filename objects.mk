@@ -1,5 +1,4 @@
 OBJECTS = \
-$(OBJ_DIR)/src-strpool.o \
-$(OBJ_DIR)/src-parser.o \
-$(OBJ_DIR)/src-match.o \
-$(OBJ_DIR)/src-main.o \
+  obj/src-strpool.o \
+  obj/src-parser.o \
+  obj/src-match.o \

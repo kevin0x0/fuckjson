@@ -1,31 +1,35 @@
-ROOT_DIR = $(shell pwd)
-SRC_DIR = $(ROOT_DIR)/src
-OBJ_DIR = $(ROOT_DIR)/obj
-BIN_DIR = $(ROOT_DIR)/bin
-BINARIES = $(BIN_DIR)/fj
+.POSIX:
 
-INSTALL_TARGET = $(HOME)/.local/bin/
-# OBJECTS defined here
-include objects.mk
+.PHONY: dirs clean install
 
+OBJ_DIR = obj
+BIN_DIR = bin
+
+INSTALL_PREFIX = ~/.local/bin/
 CC = gcc
 DEBUG = -DNDEBUG
 OPTIMIZE = -O3
 CFLAGS = $(DEBUG) $(OPTIMIZE) -Wall -Wextra --std=c23 -D_POSIX_C_SOURCE=2
 
+BINARIES = $(BIN_DIR)/fj
 
-$(BIN_DIR)/fj: $(OBJECTS) | create_dir
+$(BINARIES):
+
+# Rules defined here
+include rules.mk
+# OBJECTS defined here
+include objects.mk
+# TARGET_OBJECTS defined here
+include target_objects.mk
+
+$(BIN_DIR)/fj: $(OBJECTS) $(OBJ_DIR)/src-main.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LINK_FLAGS)
 
-include deps.mk
-
-.PHONY: create_dir clean install
-
-create_dir:
+dirs:
 	mkdir -p $(OBJ_DIR) $(BIN_DIR)
 
 clean:
-	$(RM) $(OBJECTS) $(BINARIES)
+	rm -f $(OBJECTS) $(TARGET_OBJECTS) $(BINARIES)
 
 install:
-	install -s $(BINARIES) $(INSTALL_TARGET)
+	install -s $(BINARIES) $(INSTALL_PREFIX)

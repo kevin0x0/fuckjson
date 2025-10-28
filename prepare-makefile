@@ -1,0 +1,45 @@
+#!/bin/sh
+# vim: ft=sh
+
+gen_rules() (
+  find $SOURCE_DIR_PATTERN -type f "$@" -print0 \
+    | xargs -r0 -- gcc -MM -iquote "$INCLUDE_DIR" \
+    | tr -s ' ' \
+    | while IFS=': ' read target source headers; do
+        target=${OBJ_DIR%/}/$(printf "%s" "${source%.c}.o" | tr '/' '-')
+        command='$(CC) $(CFLAGS) -c -o $@ '"$source"
+        # Write rule
+        printf '%s: %s %s\n\t%s\n' "$target" "$source" "$headers" \
+          "$command" >&3
+        # Write target and source to stdout
+        printf '%s:%s\n' "$target" "$source" 
+      done 3>"$RULES_FILE"
+)
+
+gen_objects() (
+  while IFS=':' read -r target source; do
+    for pattern in "$@"; do
+      case "$source" in
+        $pattern)
+          printf '  %s \\\n' "$target" >&3
+          continue 2
+          ;;
+      esac
+    done
+    printf '  %s \\\n' "$target" >&4
+  done 3>>"$TARGET_OBJECTS_FILE" 4>>"$OBJECTS_FILE"
+)
+
+INCLUDE_DIR=include
+
+OBJ_DIR='obj'
+RULES_FILE="rules.mk"
+OBJECTS_FILE="objects.mk"
+TARGET_OBJECTS_FILE="target_objects.mk"
+SOURCE_DIR_PATTERN='src' 
+
+: >"$RULES_FILE"
+printf 'OBJECTS = \\\n' >"$OBJECTS_FILE"
+printf 'TARGET_OBJECTS = \\\n' >"$TARGET_OBJECTS_FILE"
+
+gen_rules -name '*.c' | gen_objects "src/main.c"
