@@ -7,7 +7,7 @@ gen_rules() (
     | tr -s ' ' \
     | while IFS=': ' read target source headers; do
         target=${OBJ_DIR%/}/$(printf "%s" "${source%.c}.o" | tr '/' '-')
-        command='$(CC) $(CFLAGS) -c -o $@ '"$source"
+        command='$(CC) $(CFLAGS) -c -o $(CURDIR)/'"$target \$(CURDIR)/$source"
         # Write rule
         printf '%s: %s %s\n\t%s\n' "$target" "$source" "$headers" \
           "$command" >&3

@@ -23,13 +23,13 @@ include objects.mk
 include target_objects.mk
 
 $(BIN_DIR)/fj: $(OBJECTS) $(OBJ_DIR)/src-main.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LINK_FLAGS)
+	cd $(CURDIR); $(CC) -o $@ $^ $(CFLAGS) $(LINK_FLAGS)
 
 dirs:
-	mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	cd $(CURDIR); mkdir -p $(OBJ_DIR) $(BIN_DIR)
 
 clean:
-	rm -f $(OBJECTS) $(TARGET_OBJECTS) $(BINARIES)
+	cd $(CURDIR); rm -f $(OBJECTS) $(TARGET_OBJECTS) $(BINARIES)
 
 install:
-	install -s $(BINARIES) $(INSTALL_PREFIX)
+	cd $(CURDIR); install -s $(BINARIES) $(INSTALL_PREFIX)
