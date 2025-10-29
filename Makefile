@@ -11,25 +11,27 @@ DEBUG = -DNDEBUG
 OPTIMIZE = -O3
 CFLAGS = $(DEBUG) $(OPTIMIZE) -Wall -Wextra --std=c23 -D_POSIX_C_SOURCE=2
 
-BINARIES = $(BIN_DIR)/fj
+BINARIES = $(CURDIR)/$(BIN_DIR)/fj
 
-$(BINARIES):
+$(BIN_DIR)/fj:
 
 # Rules defined here
 include rules.mk
 # OBJECTS defined here
 include objects.mk
-# TARGET_OBJECTS defined here
-include target_objects.mk
+# EXCLUSIVE_OBJECTS defined here
+include exclusive_objects.mk
+# CLEANABLE defined here
+include clean.mk
 
 $(BIN_DIR)/fj: $(OBJECTS) $(OBJ_DIR)/src-main.o
-	cd $(CURDIR); $(CC) -o $@ $^ $(CFLAGS) $(LINK_FLAGS)
+	$(CC) -o $(CURDIR)/$@ $(CFLAGS) $(LINK_FLAGS) $(OBJECTS) $(CURDIR)/$(OBJ_DIR)/src-main.o
 
 dirs:
-	cd $(CURDIR); mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	mkdir -p $(CURDIR)/$(OBJ_DIR) $(CURDIR)/$(BIN_DIR)
 
 clean:
-	cd $(CURDIR); rm -f $(OBJECTS) $(TARGET_OBJECTS) $(BINARIES)
+	rm -f $(CLEANABLE) $(BINARIES)
 
 install:
-	cd $(CURDIR); install -s $(BINARIES) $(INSTALL_PREFIX)
+	install -s $(BINARIES) $(INSTALL_PREFIX)
