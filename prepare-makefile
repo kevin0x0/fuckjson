@@ -13,23 +13,23 @@ gen_rules() (
           "$command" >&3
         # Write target and source to stdout
         printf '%s:%s\n' "$target" "$source" 
-      done 3>"$RULES_FILE"
+      done 3>>"$RULES_FILE"
 )
 
 gen_objects() (
   while IFS=':' read -r target source; do
-    printf '  $(CURDIR)/%s \\\n' "$target" >&5
-
     for pattern in "$@"; do
       case "$source" in
         $pattern)
-          printf '  %s \\\n' "$target" >&3
+          printf 'EXCLUSIVE_OBJECTS += %s\n' "$target"
+          printf 'EXCLUSIVE_OBJECT_FILES += $(CURDIR)/%s\n' "$target"
           continue 2
           ;;
       esac
     done
-    printf '  %s \\\n' "$target" >&4
-  done 3>>"$EXCLUSIVE_OBJECTS_FILE" 4>>"$OBJECTS_FILE" 5>>"$CLEAN_FILE"
+    printf 'OBJECTS += %s\n' "$target"
+    printf 'OBJECT_FILES += $(CURDIR)/%s\n' "$target"
+  done
 )
 
 INCLUDE_DIR=include
@@ -37,13 +37,8 @@ INCLUDE_DIR=include
 OBJ_DIR='obj'
 RULES_FILE="rules.mk"
 OBJECTS_FILE="objects.mk"
-EXCLUSIVE_OBJECTS_FILE="exclusive_objects.mk"
 SOURCE_DIR_PATTERN='src' 
-CLEAN_FILE='clean.mk'
 
 : >"$RULES_FILE"
-printf 'OBJECTS = \\\n' >"$OBJECTS_FILE"
-printf 'EXCLUSIVE_OBJECTS = \\\n' >"$EXCLUSIVE_OBJECTS_FILE"
-printf 'CLEANABLE = \\\n' >"$CLEAN_FILE"
 
-gen_rules -name '*.c' | gen_objects "src/main.c"
+gen_rules -name '*.c' | gen_objects "src/main.c" >"$OBJECTS_FILE"
